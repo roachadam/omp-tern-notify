@@ -323,7 +323,8 @@ export default function desktopNotify(pi: ExtensionAPI) {
 	const sendTestPush = async (ctx: ExtensionContext) => {
 		try {
 			await sendToPhone(scope, { title: "omp", message: "Test notification from omp-desktop-notify", urgent: false });
-			ctx.ui.notify("Test notification sent to your phone", "info");
+			const off = settings.phone.get(scope) ? "" : " Phone notifications are off: turn them on above to get real ones.";
+			ctx.ui.notify(`Test notification sent to your phone.${off}`, off ? "warning" : "info");
 		} catch (error) {
 			ctx.ui.notify(`Phone test failed: ${error instanceof Error ? error.message : String(error)}`, "error");
 		}
