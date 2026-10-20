@@ -17,7 +17,17 @@
 import type { ExtensionAPI, ExtensionCommandContext, ExtensionContext } from "@oh-my-pi/pi-coding-agent";
 import { lookup } from "@oh-my-pi/pi-coding-agent/config/registry";
 import { renderUnicodeCompact } from "uqr";
-import { awayFromMac, ensureAlerter, isTern, post, terminal, terminalIsFrontmost } from "./macos.ts";
+import {
+	awayFromMac,
+	ensureAlerter,
+	isTern,
+	MAC_SOUNDS,
+	macSound,
+	post,
+	previewSound,
+	terminal,
+	terminalIsFrontmost,
+} from "./macos.ts";
 import { appLink, copyTopic, ntfyServer, ntfyTopic, sendToPhone } from "./phone.ts";
 import { BUILTIN_TERMINAL_NOTIFY, cycle, type MenuRow, settings } from "./settings.ts";
 
@@ -232,7 +242,7 @@ export default function ternNotify(pi: ExtensionAPI) {
 				controller.abort();
 			};
 			pi.logger.debug("tern-notify: posting", { subtitle, message });
-			post({ subtitle, message, group }, controller.signal).then(
+			post({ subtitle, message, group, sound: macSound(settings.sound.get(scope)) }, controller.signal).then(
 				outcome => {
 					pi.logger.debug("tern-notify: outcome", { message, outcome });
 					if (cancelled) return;
@@ -362,6 +372,7 @@ export default function ternNotify(pi: ExtensionAPI) {
 				cycle("Delay (seconds)", settings.delay, [0, 3, 10, 30]),
 				cycle("Minimum turn length (seconds)", settings.minTurn, [0, 10, 30, 60]),
 				cycle("Replace terminal notifications (Tern only)", settings.replaceBuiltin, [true, false], applyBuiltinOverride),
+				cycle("Sound", settings.sound, MAC_SOUNDS, () => previewSound(settings.sound.get(scope))),
 				{
 					label: "Phone notifications (ntfy)",
 					display: s => (settings.phone.get(s) ? "on" : "off"),
@@ -371,6 +382,7 @@ export default function ternNotify(pi: ExtensionAPI) {
 						if (on) return showPhoneQr(ctx);
 					},
 				},
+				cycle("Phone sound", settings.phoneSound, [true, false]),
 				cycle("Phone after Mac idle (minutes)", settings.phoneAfterMinutes, [1, 2, 5, 10]),
 				{ label: "Subscribe a phone", display: () => "copy topic, Android QR code", select: () => showPhoneQr(ctx) },
 				{ label: "Send test notification", display: () => "to your phone", select: () => sendTestPush(ctx) },

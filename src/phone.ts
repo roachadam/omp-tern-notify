@@ -84,7 +84,8 @@ export async function sendToPhone(scope: ScopeLike, message: PhoneMessage): Prom
 			topic: ntfyTopic(scope),
 			title: message.title,
 			message: message.message,
-			priority: message.urgent ? 4 : 3,
+			// ntfy priority sets the sound: 2 is silent on both phone apps, 4 also gets through Focus on iPhone.
+			priority: !settings.phoneSound.get(scope) ? 2 : message.urgent ? 4 : 3,
 			tags: [message.urgent ? "bell" : "white_check_mark"],
 			...(isTern ? { click: TERN_APP_LINK } : {}),
 		}),

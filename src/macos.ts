@@ -85,6 +85,26 @@ async function focusTerminal(): Promise<void> {
 	}
 }
 
+/** Built-in alert sounds offered in the menu; any name from /System/Library/Sounds works in config. */
+export const MAC_SOUNDS = ["default", "Glass", "Ping", "Pop", "Submarine", "Tink", "off"] as const;
+
+/** The `sound` setting as alerter takes it: undefined for "off". */
+export function macSound(setting: string | undefined): string | undefined {
+	const name = setting?.trim();
+	return !name || name === "off" ? undefined : name;
+}
+
+/** Plays a sound once, so you can hear a choice in the menu. "default" is your Mac's alert sound. */
+export function previewSound(setting: string | undefined): void {
+	const name = macSound(setting);
+	if (!name) return;
+	const path =
+		name === "default"
+			? Bun.spawnSync(["defaults", "read", "-g", "com.apple.sound.beep.sound"]).stdout.toString().trim()
+			: `/System/Library/Sounds/${name}.aiff`;
+	if (path) Bun.spawn(["afplay", path], { stdout: "ignore", stderr: "ignore" }).unref();
+}
+
 const ALERTER_VERSION = "26.5";
 const ALERTER_URL = `https://github.com/vjeantet/alerter/releases/download/v${ALERTER_VERSION}/alerter-${ALERTER_VERSION}.zip`;
 const ALERTER_ZIP_SHA256 = "11f63cddc9bb3f8554ed9b762632a120cfa7bee05e3c09d65734823e09d24f10";
@@ -144,6 +164,8 @@ export interface Notification {
 	message: string;
 	/** Notifications sharing a group replace each other. */
 	group: string;
+	/** "default" or a /System/Library/Sounds name; undefined is silent. */
+	sound: string | undefined;
 }
 
 /**
@@ -163,9 +185,9 @@ export async function post(notification: Notification, signal: AbortSignal): Pro
 		`--subtitle=${notification.subtitle}`,
 		`--message=${notification.message}`,
 		`--group=${notification.group}`,
-		"--sound=default",
 		"--json",
 	];
+	if (notification.sound) argv.push(`--sound=${notification.sound}`);
 	if (terminal) argv.push(`--sender=${terminal.bundleId}`);
 	const spawn = () => {
 		try {

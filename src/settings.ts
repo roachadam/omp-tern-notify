@@ -33,9 +33,13 @@ export const settings = {
 	minTurn: define({ id: "ternNotify.minTurnSeconds", type: "number", default: 10 }),
 	/** Under Tern, turn off omp's built-in OSC 99 notifications, which duplicate Tern's own banners. */
 	replaceBuiltin: define({ id: "ternNotify.replaceBuiltin", type: "boolean", default: true }),
+	/** Mac notification sound: "default", a name from /System/Library/Sounds (e.g. "Glass"), or "off". */
+	sound: define({ id: "ternNotify.sound", type: "string", default: "default" }),
 
 	/** Also push to your phone through ntfy while you are away from the Mac. */
 	phone: define({ id: "ternNotify.phone", type: "boolean", default: false }),
+	/** Off sends phone pushes at ntfy's low priority, which both phone apps deliver silently. */
+	phoneSound: define({ id: "ternNotify.phoneSound", type: "boolean", default: true }),
 	/** Minutes without keyboard or mouse input (or a locked screen) that count as away from the Mac. */
 	phoneAfterMinutes: define({ id: "ternNotify.phoneAfterMinutes", type: "number", default: 2 }),
 	ntfyServer: define({ id: "ternNotify.ntfyServer", type: "string", default: "https://ntfy.sh" }),

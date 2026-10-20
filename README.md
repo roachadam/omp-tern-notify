@@ -78,10 +78,14 @@ Type `/notifications` in omp to change settings. Pick a line to change it.
 | Delay | 3 seconds | How long to wait before notifying |
 | Minimum turn length | 10 seconds | Skip "Complete" for quick replies |
 | Replace terminal notifications | on | In Tern only, turns off omp's own built-in alerts so you don't see everything twice |
+| Sound | default | Sound for Mac notifications: your Mac's alert sound, Glass, Ping, Pop, Submarine, Tink, or off. Picking one plays it so you can hear it |
 | Phone notifications | off | Also send to your phone through ntfy |
+| Phone sound | on | Off makes phone notifications arrive silently |
 | Phone after Mac idle | 2 minutes | How long without keyboard or mouse before you count as away |
 
-Settings are saved in `~/.omp/agent/config.yml` under `ternNotify:`, so you can edit them there too. To turn off all notifications for one session, start omp with `PI_NOTIFICATIONS=off`.
+Settings are saved in `~/.omp/agent/config.yml` under `ternNotify:`, so you can edit them there too. For the Mac sound you can use any name from `/System/Library/Sounds`, like `sound: Hero`. To turn off all notifications for one session, start omp with `PI_NOTIFICATIONS=off`.
+
+With phone sound on, approvals and questions use ntfy's high priority, which on iPhone also gets through Focus modes. On Android you can pick ntfy's sounds per priority in the app's settings.
 
 ## Things to know
 
