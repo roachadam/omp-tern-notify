@@ -36,6 +36,28 @@ function truncate(text: string, max = 180): string {
 	return flat.length > max ? `${flat.slice(0, max - 1)}…` : flat;
 }
 
+/** Word-wraps plain text to `width` columns; a word longer than a line is split. */
+function wrap(text: string, width: number): string[] {
+	const max = Math.max(10, width);
+	const lines: string[] = [];
+	let line = "";
+	for (const word of text.split(" ")) {
+		const candidate = line ? `${line} ${word}` : word;
+		if (Bun.stringWidth(candidate) <= max) {
+			line = candidate;
+			continue;
+		}
+		if (line) lines.push(line);
+		line = word;
+		while (Bun.stringWidth(line) > max) {
+			lines.push(line.slice(0, max));
+			line = line.slice(max);
+		}
+	}
+	if (line) lines.push(line);
+	return lines;
+}
+
 function firstAskQuestion(args: unknown): string | undefined {
 	if (!args || typeof args !== "object" || !("questions" in args) || !Array.isArray(args.questions)) return undefined;
 	const first: unknown = args.questions[0];
@@ -269,15 +291,20 @@ export default function desktopNotify(pi: ExtensionAPI) {
 	 */
 	const showPhoneQr = (ctx: ExtensionContext): "close" => {
 		const url = subscribeUrl(scope);
-		const qr = renderUnicodeCompact(url, { border: 1 }).split("\n");
-		hideQr(ctx);
-		ctx.ui.setWidget(QR_WIDGET, [
-			"Phone notifications: install the ntfy app (iOS or Android), then scan this or open the link on your phone,",
-			`or add topic ${ntfyTopic(scope)} on server ${ntfyServer(scope)} in the app.`,
-			"Then run /notifications › Send test notification. This goes away when you send your next message.",
+		const text = [
+			"Phone notifications: install the ntfy app (iOS or Android), then scan this code or open the link on your phone.",
 			url,
-			...qr,
-		]);
+		];
+		const qr = renderUnicodeCompact(url, { border: 1 }).split("\n");
+		const footer = [
+			`Or add topic ${ntfyTopic(scope)} on server ${ntfyServer(scope)} in the app.`,
+			"Then run /notifications › Send test notification. This goes away when you send your next message.",
+		];
+		hideQr(ctx);
+		// A component, not a string array: omp caps string-array widgets at 10 lines.
+		ctx.ui.setWidget(QR_WIDGET, () => ({
+			render: width => [...text.flatMap(line => wrap(line, width)), ...qr, ...footer.flatMap(line => wrap(line, width))],
+		}));
 		const timer = ctx.setTimeout(() => hideQr(ctx), QR_VISIBLE_MS);
 		hideQrTimer = () => ctx.clearTimer(timer);
 		return "close";
