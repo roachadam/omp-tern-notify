@@ -25,9 +25,22 @@ export function ntfyServer(scope: ScopeLike): string {
 	return (settings.ntfyServer.get(scope)?.trim() || "https://ntfy.sh").replace(/\/+$/, "");
 }
 
-/** The page that subscribes a phone to the topic: open it on the phone, or add the topic in the app. */
-export function subscribeUrl(scope: ScopeLike): string {
-	return `${ntfyServer(scope)}/${ntfyTopic(scope)}`;
+/**
+ * A link that subscribes the ntfy Android app in one tap. The iOS app registers no link
+ * handler, so on an iPhone the topic has to be added in the app (see `copyTopic`).
+ */
+export function appLink(scope: ScopeLike): string {
+	const server = new URL(ntfyServer(scope));
+	const insecure = server.protocol === "http:" ? "&secure=false" : "";
+	return `ntfy://${server.host}${server.pathname.replace(/\/+$/, "")}/${ntfyTopic(scope)}?display=omp${insecure}`;
+}
+
+/** Puts the topic on the Mac clipboard; Universal Clipboard makes it pasteable on an iPhone. */
+export async function copyTopic(scope: ScopeLike): Promise<void> {
+	const proc = Bun.spawn(["pbcopy"], { stdin: "pipe", stdout: "ignore", stderr: "ignore" });
+	proc.stdin.write(ntfyTopic(scope));
+	await proc.stdin.end();
+	await proc.exited;
 }
 
 export interface PhoneMessage {

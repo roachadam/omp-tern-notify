@@ -18,7 +18,7 @@ import type { ExtensionAPI, ExtensionCommandContext, ExtensionContext } from "@o
 import { lookup } from "@oh-my-pi/pi-coding-agent/config/registry";
 import { renderUnicodeCompact } from "uqr";
 import { awayFromMac, ensureAlerter, isTern, post, terminal, terminalIsFrontmost } from "./macos.ts";
-import { ntfyServer, ntfyTopic, sendToPhone, subscribeUrl } from "./phone.ts";
+import { appLink, copyTopic, ntfyServer, ntfyTopic, sendToPhone } from "./phone.ts";
 import { BUILTIN_TERMINAL_NOTIFY, cycle, type MenuRow, settings } from "./settings.ts";
 
 /** How often a held or posted notification checks whether the terminal is frontmost. */
@@ -285,19 +285,26 @@ export default function desktopNotify(pi: ExtensionAPI) {
 	};
 
 	/**
-	 * Shows how to subscribe a phone: a link and QR code above the prompt, left there until your
-	 * next message or for QR_VISIBLE_MS. The menu closes first, because Tern blurs everything
-	 * behind an open dialog, which would make the code unscannable.
+	 * Shows how to subscribe a phone above the prompt, left there until your next message or for
+	 * QR_VISIBLE_MS. The menu closes first, because Tern blurs everything behind an open dialog,
+	 * which would make the code unscannable.
+	 *
+	 * The ntfy iOS app has no link handler, so iPhone users paste the topic (copied to the Mac
+	 * clipboard, reaching the phone through Universal Clipboard); Android users scan an ntfy:// link.
 	 */
 	const showPhoneQr = (ctx: ExtensionContext): "close" => {
-		const url = subscribeUrl(scope);
+		const topic = ntfyTopic(scope);
+		const server = ntfyServer(scope);
+		const customServer = server !== "https://ntfy.sh" ? `, with server ${server}` : "";
+		copyTopic(scope).catch(error => warnOnce(ctx, error));
 		const text = [
-			"Phone notifications: install the ntfy app (iOS or Android), then scan this code or open the link on your phone.",
-			url,
+			"Phone notifications. Install the ntfy app, then:",
+			`  iPhone: in ntfy tap + and paste${customServer}. The topic is on your clipboard (Universal Clipboard).`,
+			"  Android: scan this code with the camera; it subscribes the ntfy app directly.",
 		];
-		const qr = renderUnicodeCompact(url, { border: 1 }).split("\n");
+		const qr = renderUnicodeCompact(appLink(scope), { border: 1 }).split("\n");
 		const footer = [
-			`Or add topic ${ntfyTopic(scope)} on server ${ntfyServer(scope)} in the app.`,
+			`Topic: ${topic}`,
 			"Then run /notifications › Send test notification. This goes away when you send your next message.",
 		];
 		hideQr(ctx);
@@ -348,7 +355,7 @@ export default function desktopNotify(pi: ExtensionAPI) {
 					},
 				},
 				cycle("Phone after Mac idle (minutes)", settings.phoneAfterMinutes, [1, 2, 5, 10]),
-				{ label: "Show phone QR code", display: () => "link and code to subscribe", select: () => showPhoneQr(ctx) },
+				{ label: "Subscribe a phone", display: () => "copy topic, Android QR code", select: () => showPhoneQr(ctx) },
 				{ label: "Send test notification", display: () => "to your phone", select: () => sendTestPush(ctx) },
 			];
 			for (;;) {
