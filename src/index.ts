@@ -1,5 +1,5 @@
 /**
- * omp-desktop-notify: macOS desktop notifications for omp.
+ * omp-desktop-notify: macOS desktop notifications for omp, plus optional phone push via ntfy.
  *
  * Notifies when a tool call waits for approval, the ask tool waits for an answer, a plan waits
  * for review, a turn finishes, or a run stops with an error, by default only while the
@@ -9,17 +9,25 @@
  *     held and posted when you leave. A finished turn or error is dropped: you already saw it.
  *   - A posted notification is retracted once its event is handled, or when you return to the
  *     terminal; a waiting event is then held again in case you leave without answering.
+ *   - With the phone channel on, an event also goes to the phone once you are away from the Mac
+ *     (screen locked, or idle for `phoneAfterMinutes`): a waiting event as soon as you leave
+ *     while it is unanswered, a finished turn or error only if you were already away.
  * Settings: `/notifications`.
  */
-import type { ExtensionAPI, ExtensionContext } from "@oh-my-pi/pi-coding-agent";
+import type { ExtensionAPI, ExtensionCommandContext, ExtensionContext } from "@oh-my-pi/pi-coding-agent";
 import { lookup } from "@oh-my-pi/pi-coding-agent/config/registry";
-import { ensureAlerter, isTern, post, terminal, terminalIsFrontmost } from "./macos.ts";
-import { BUILTIN_TERMINAL_NOTIFY, MENU, settings } from "./settings.ts";
+import { renderUnicodeCompact } from "uqr";
+import { awayFromMac, ensureAlerter, isTern, post, terminal, terminalIsFrontmost } from "./macos.ts";
+import { ntfyServer, ntfyTopic, sendToPhone, subscribeUrl } from "./phone.ts";
+import { BUILTIN_TERMINAL_NOTIFY, cycle, type MenuRow, settings } from "./settings.ts";
 
 /** How often a held or posted notification checks whether the terminal is frontmost. */
 const POLL_MS = 2000;
+/** How often an unanswered event checks whether you have left the Mac. */
+const PHONE_POLL_MS = 5000;
 /** Slot key for finished-turn and error notifications. */
 const TURN_KEY = "turn";
+const QR_WIDGET = "desktop-notify-qr";
 
 function truncate(text: string, max = 180): string {
 	const flat = text.replace(/\s+/g, " ").trim();
@@ -82,16 +90,58 @@ export default function desktopNotify(pi: ExtensionAPI) {
 		let cancelled = false;
 		/** Undoes the current stage: clears its timer or retracts its notification. */
 		let stop = () => {};
+		/** Stops waiting to escalate the event to the phone. */
+		let stopPhone = () => {};
 		const slot = {
 			cancel: () => {
 				cancelled = true;
 				stop();
+				stopPhone();
 			},
 		};
 		slots.set(key, slot);
 		const finish = () => {
 			stop();
+			if (waiting) stopPhone(); // dismissed or clicked at the Mac: you have seen it
 			if (slots.get(key) === slot) slots.delete(key);
+		};
+		// Session titles may lead with Nerd Font icons (Unicode private-use code points), which
+		// Notification Center's system font and phone fonts draw as a "?" box.
+		const sessionName = () => ctx.sessionManager.getSessionName()?.replace(/\p{Co}/gu, "").trim() || "omp";
+
+		/**
+		 * Phone stage, independent of the Mac stages. A waiting event goes to the phone once you
+		 * leave the Mac while it is unanswered; a finished turn or error only if you were already away.
+		 */
+		const escalateToPhone = async () => {
+			if (!settings.phone.get(scope)) return;
+			const idleSeconds = Math.max(0, settings.phoneAfterMinutes.get(scope)) * 60;
+			const send = () => {
+				pi.logger.debug("desktop-notify: sending to phone", { body });
+				sendToPhone(scope, { title: sessionName(), message: truncate(body), urgent: waiting }).catch(error =>
+					warnOnce(ctx, error),
+				);
+			};
+			const away = await awayFromMac(idleSeconds);
+			if (cancelled) return;
+			if (away) return send();
+			if (!waiting) return;
+			let checking = false;
+			const timer = ctx.setInterval(async () => {
+				if (cancelled) {
+					ctx.clearTimer(timer);
+					return;
+				}
+				if (checking) return;
+				checking = true;
+				const nowAway = await awayFromMac(idleSeconds).finally(() => {
+					checking = false;
+				});
+				if (cancelled || !nowAway) return;
+				ctx.clearTimer(timer);
+				send();
+			}, PHONE_POLL_MS);
+			stopPhone = () => ctx.clearTimer(timer);
 		};
 
 		/**
@@ -125,9 +175,7 @@ export default function desktopNotify(pi: ExtensionAPI) {
 		};
 
 		const show = (away: boolean) => {
-			// Session titles may lead with Nerd Font icons (Unicode private-use code points), which
-			// Notification Center's system font draws as a "?" box.
-			const subtitle = ctx.sessionManager.getSessionName()?.replace(/\p{Co}/gu, "").trim() || "omp";
+			const subtitle = sessionName();
 			const message = truncate(body);
 			const group = `omp-${ctx.sessionManager.getSessionId()}-${++posts}`;
 			const controller = new AbortController();
@@ -165,6 +213,7 @@ export default function desktopNotify(pi: ExtensionAPI) {
 
 		const delayMs = Math.max(0, settings.delay.get(scope)) * 1000;
 		const timer = ctx.setTimeout(async () => {
+			escalateToPhone().catch(error => warnOnce(ctx, error));
 			// An unidentified terminal cannot be checked, so it is notified as if `when` were "always".
 			const front = terminal ? await terminalIsFrontmost() : false;
 			if (cancelled) return;
@@ -204,19 +253,62 @@ export default function desktopNotify(pi: ExtensionAPI) {
 	});
 	pi.on("session_shutdown", cancelAll);
 
+	/** Shows how to subscribe a phone (link and QR code above the prompt), then offers a test push. */
+	const phoneSetup = async (ctx: ExtensionCommandContext) => {
+		const url = subscribeUrl(scope);
+		const qr = renderUnicodeCompact(url, { border: 1 }).split("\n");
+		ctx.ui.setWidget(QR_WIDGET, [
+			"Phone notifications: install the ntfy app (iOS or Android), then scan this or open the link on your phone,",
+			`or add topic ${ntfyTopic(scope)} on server ${ntfyServer(scope)} in the app.`,
+			url,
+			...qr,
+		]);
+		try {
+			const test = await ctx.ui.confirm("Phone notifications", "Subscribed? Send a test notification to your phone now?");
+			if (!test) return;
+			await sendToPhone(scope, { title: "omp", message: "Test notification from omp-desktop-notify", urgent: false });
+			ctx.ui.notify("Test notification sent", "info");
+		} catch (error) {
+			ctx.ui.notify(`Phone test failed: ${error instanceof Error ? error.message : String(error)}`, "error");
+		} finally {
+			ctx.ui.setWidget(QR_WIDGET, undefined);
+		}
+	};
+
 	// omp's /settings panel lists only built-in settings, so this command is the settings UI.
 	pi.registerCommand("notifications", {
-		description: "Configure desktop notifications",
+		description: "Configure desktop and phone notifications",
 		handler: async (_args, ctx) => {
 			if (!ctx.hasUI) return;
-			const display = (value: unknown) => (value === true ? "on" : value === false ? "off" : String(value));
+			const menu: MenuRow[] = [
+				cycle("Desktop notifications", settings.enabled, [true, false], applyBuiltinOverride),
+				cycle("When", settings.when, ["away", "always"]),
+				cycle("Tool approvals", settings.approval, [true, false]),
+				cycle("Questions", settings.question, [true, false]),
+				cycle("Plan reviews", settings.plan, [true, false]),
+				cycle("Finished turns", settings.complete, [true, false]),
+				cycle("Errors", settings.error, [true, false]),
+				cycle("Delay (seconds)", settings.delay, [0, 3, 10, 30]),
+				cycle("Minimum turn length (seconds)", settings.minTurn, [0, 10, 30, 60]),
+				cycle("Replace terminal notifications (Tern only)", settings.replaceBuiltin, [true, false], applyBuiltinOverride),
+				{
+					label: "Phone notifications (ntfy)",
+					display: s => (settings.phone.get(s) ? "on" : "off"),
+					select: async s => {
+						const on = !settings.phone.get(s);
+						settings.phone.set(s, on);
+						if (on) await phoneSetup(ctx);
+					},
+				},
+				cycle("Phone after Mac idle (minutes)", settings.phoneAfterMinutes, [1, 2, 5, 10]),
+				{ label: "Phone setup and test", display: () => "QR code, link, test push", select: () => phoneSetup(ctx) },
+			];
 			for (;;) {
-				const options = MENU.map(row => `${row.label}: ${display(row.setting.get(scope))}`);
-				const picked = await ctx.ui.select("Desktop notifications (select to change, Esc to close)", options);
-				const row = picked === undefined ? undefined : MENU[options.indexOf(picked)];
+				const options = menu.map(row => `${row.label}: ${row.display(scope)}`);
+				const picked = await ctx.ui.select("Notifications (select to change, Esc to close)", options);
+				const row = picked === undefined ? undefined : menu[options.indexOf(picked)];
 				if (!row) return;
-				row.advance(scope);
-				if (row.setting === settings.enabled || row.setting === settings.replaceBuiltin) applyBuiltinOverride();
+				await row.select(scope);
 			}
 		},
 	});

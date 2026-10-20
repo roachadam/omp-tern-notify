@@ -1,5 +1,4 @@
 import {
-	type AnySetting,
 	type DefinitionValue,
 	lookup,
 	register,
@@ -34,36 +33,38 @@ export const settings = {
 	minTurn: define({ id: "desktopNotify.minTurnSeconds", type: "number", default: 10 }),
 	/** Under Tern, turn off omp's built-in OSC 99 notifications, which duplicate Tern's own banners. */
 	replaceBuiltin: define({ id: "desktopNotify.replaceBuiltin", type: "boolean", default: true }),
+
+	/** Also push to your phone through ntfy while you are away from the Mac. */
+	phone: define({ id: "desktopNotify.phone", type: "boolean", default: false }),
+	/** Minutes without keyboard or mouse input (or a locked screen) that count as away from the Mac. */
+	phoneAfterMinutes: define({ id: "desktopNotify.phoneAfterMinutes", type: "number", default: 2 }),
+	ntfyServer: define({ id: "desktopNotify.ntfyServer", type: "string", default: "https://ntfy.sh" }),
+	/** Generated on first use; anyone who knows it can read and post to it. */
+	ntfyTopic: define({ id: "desktopNotify.ntfyTopic", type: "string", default: "" }),
+	/** Access token for servers that require one (`Authorization: Bearer`). */
+	ntfyToken: define({ id: "desktopNotify.ntfyToken", type: "string", default: "", credential: true }),
 };
-
-export interface MenuRow {
-	label: string;
-	setting: AnySetting;
-	/** Moves the setting to its next value, wrapping around; an unlisted value moves to the first. */
-	advance(scope: ScopeLike): void;
-}
-
-function row<T>(label: string, setting: Setting<T>, values: readonly T[]): MenuRow {
-	return {
-		label,
-		setting,
-		advance: scope => setting.set(scope, values[(values.indexOf(setting.get(scope)) + 1) % values.length]),
-	};
-}
-
-/** Rows of the `/notifications` menu. */
-export const MENU: readonly MenuRow[] = [
-	row("Desktop notifications", settings.enabled, [true, false]),
-	row("When", settings.when, ["away", "always"]),
-	row("Tool approvals", settings.approval, [true, false]),
-	row("Questions", settings.question, [true, false]),
-	row("Plan reviews", settings.plan, [true, false]),
-	row("Finished turns", settings.complete, [true, false]),
-	row("Errors", settings.error, [true, false]),
-	row("Delay (seconds)", settings.delay, [0, 3, 10, 30]),
-	row("Minimum turn length (seconds)", settings.minTurn, [0, 10, 30, 60]),
-	row("Replace terminal notifications (Tern only)", settings.replaceBuiltin, [true, false]),
-];
 
 /** omp's own terminal notifications (OSC 99) that Tern already covers through OSC 7501 program status. */
 export const BUILTIN_TERMINAL_NOTIFY = ["completion.notify", "ask.notify", "error.notify"] as const;
+
+/** A `/notifications` menu row: shows `label: <value>`; selecting it runs `select`. */
+export interface MenuRow {
+	label: string;
+	display(scope: ScopeLike): string;
+	select(scope: ScopeLike): void | Promise<void>;
+}
+
+const show = (value: unknown) => (value === true ? "on" : value === false ? "off" : String(value));
+
+/** A row that moves `setting` to its next value, wrapping around; an unlisted value moves to the first. */
+export function cycle<T>(label: string, setting: Setting<T>, values: readonly T[], onChange?: () => void): MenuRow {
+	return {
+		label,
+		display: scope => show(setting.get(scope)),
+		select: scope => {
+			setting.set(scope, values[(values.indexOf(setting.get(scope)) + 1) % values.length]);
+			onChange?.();
+		},
+	};
+}

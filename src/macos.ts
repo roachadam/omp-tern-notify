@@ -64,6 +64,18 @@ export async function terminalIsFrontmost(): Promise<boolean> {
 	return /bundleID="([^"]+)"/.exec(info)?.[1] === terminal.bundleId;
 }
 
+/**
+ * Whether you have left the Mac: the screen is locked, or there has been no keyboard or mouse
+ * input for `idleSeconds`. A locked screen counts at once.
+ */
+export async function awayFromMac(idleSeconds: number): Promise<boolean> {
+	const root = await output(["ioreg", "-n", "Root", "-d1"]);
+	if (/"CGSSessionScreenIsLocked"\s*=\s*Yes/.test(root)) return true;
+	const hid = await output(["ioreg", "-c", "IOHIDSystem", "-d", "4", "-r", "-k", "HIDIdleTime"]);
+	const idleNs = /"HIDIdleTime" = (\d+)/.exec(hid)?.[1];
+	return idleNs !== undefined && Number(idleNs) / 1e9 >= idleSeconds;
+}
+
 /** Brings the terminal forward and, under Tern, focuses the pane this omp runs in. */
 async function focusTerminal(): Promise<void> {
 	if (!terminal) return;

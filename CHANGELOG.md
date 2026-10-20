@@ -9,4 +9,5 @@ First release.
 - Notifications are removed once their event is handled, when omp exits, or when you return to the terminal.
 - Clicking a notification brings the terminal forward; in Tern it also focuses the omp pane.
 - Under Tern, notifications carry Tern's name and icon, and omp's duplicate built-in notifications are switched off.
+- Optional phone notifications through ntfy once you're away from the Mac (screen locked, or idle for 2 minutes). Setup shows a QR code and sends a test push.
 - `/notifications` menu and `desktopNotify.*` settings.
