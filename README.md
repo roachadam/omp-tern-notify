@@ -6,6 +6,8 @@ It's made for **omp running inside [Tern](https://stencil.so/tern)** on a Mac. T
 
 This is a community plugin. It isn't made by the omp or Tern teams.
 
+It's meant as a stopgap. Tern already shows its own alerts inside the app, and once it can send them to your desktop and phone itself, this plugin won't be needed. I wanted it until then.
+
 ## What it does
 
 | When | You get |
@@ -83,7 +85,7 @@ Settings are saved in `~/.omp/agent/config.yml` under `desktopNotify:`, so you c
 
 ## Things to know
 
-- **Mac only.** On Linux and Windows the plugin does nothing.
+- **Mac only.** On Linux and Windows the plugin does nothing. Contributions for Linux or Windows are welcome; see [Development](#development).
 - **It leans on an old macOS feature.** Showing notifications as Tern (with Tern's name and icon) uses a trick Apple no longer documents. It works today (tested on macOS 27), but a future macOS update could break it.
 - **Clicking only works while omp is running.** If you quit omp, its notifications are removed too.
 - **Phone notifications can't be taken back.** Once one is sent, it stays in the ntfy app even after you answer on the Mac.
@@ -123,6 +125,8 @@ rm -rf ~/Library/Caches/omp-desktop-notify
 If you changed any settings, also delete the `desktopNotify:` section from `~/.omp/agent/config.yml`.
 
 ## Development
+
+Linux and Windows support would be a welcome contribution. Most of the plugin already works anywhere; the parts that need a version per platform are in `src/macos.ts`: showing and removing a notification, telling whether Tern is in front, and telling whether you're away from the computer. Phone notifications only need the last one. If you take this on, please test it on the real platform and open a pull request.
 
 ```sh
 git clone https://github.com/roachadam/omp-desktop-notify
