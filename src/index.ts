@@ -1,5 +1,5 @@
 /**
- * omp-desktop-notify: macOS desktop notifications for omp, plus optional phone push via ntfy.
+ * omp-tern-notify: Mac and phone notifications for omp, made for omp running in Tern.
  *
  * Notifies when a tool call waits for approval, the ask tool waits for an answer, a plan waits
  * for review, a turn finishes, or a run stops with an error, by default only while the
@@ -27,7 +27,7 @@ const POLL_MS = 2000;
 const PHONE_POLL_MS = 5000;
 /** Slot key for finished-turn and error notifications. */
 const TURN_KEY = "turn";
-const QR_WIDGET = "desktop-notify-qr";
+const QR_WIDGET = "tern-notify-qr";
 /** How long the phone setup QR code stays above the prompt if you send nothing. */
 const QR_VISIBLE_MS = 5 * 60_000;
 
@@ -70,11 +70,11 @@ function notificationsSuppressed(): boolean {
 	return value === "off" || value === "0" || value === "false";
 }
 
-export default function desktopNotify(pi: ExtensionAPI) {
+export default function ternNotify(pi: ExtensionAPI) {
 	if (process.platform !== "darwin") return;
 	// Over SSH the notification would appear on the remote Mac, not in front of you.
 	if (Bun.env.SSH_CONNECTION || Bun.env.SSH_TTY) return;
-	pi.setLabel("Desktop Notifications");
+	pi.setLabel("Tern Notify");
 
 	const scope = pi.pi.settings;
 
@@ -90,7 +90,7 @@ export default function desktopNotify(pi: ExtensionAPI) {
 
 	const warnOnce = (ctx: ExtensionContext, channel: "mac" | "phone", error: unknown) => {
 		const message = error instanceof Error ? error.message : String(error);
-		pi.logger.warn("desktop-notify", { channel, message });
+		pi.logger.warn("tern-notify", { channel, message });
 		if (warned.has(channel)) return;
 		warned.add(channel);
 		ctx.ui.notify(`${channel === "mac" ? "Desktop" : "Phone"} notifications: ${message}`, "warning");
@@ -155,7 +155,7 @@ export default function desktopNotify(pi: ExtensionAPI) {
 			const send = () => {
 				phoneDone = true;
 				if (!settings.phone.get(scope)) return; // switched off while this event waited
-				pi.logger.debug("desktop-notify: sending to phone", { body });
+				pi.logger.debug("tern-notify: sending to phone", { body });
 				sendToPhone(scope, { title: sessionName(), message: truncate(body), urgent: waiting }).catch(error =>
 					warnOnce(ctx, "phone", error),
 				);
@@ -208,7 +208,7 @@ export default function desktopNotify(pi: ExtensionAPI) {
 		};
 
 		const hold = () => {
-			pi.logger.debug("desktop-notify: holding until you leave the terminal", { body });
+			pi.logger.debug("tern-notify: holding until you leave the terminal", { body });
 			waitUntil(false, () => show(true));
 		};
 
@@ -231,10 +231,10 @@ export default function desktopNotify(pi: ExtensionAPI) {
 				stopWatching();
 				controller.abort();
 			};
-			pi.logger.debug("desktop-notify: posting", { subtitle, message });
+			pi.logger.debug("tern-notify: posting", { subtitle, message });
 			post({ subtitle, message, group }, controller.signal).then(
 				outcome => {
-					pi.logger.debug("desktop-notify: outcome", { message, outcome });
+					pi.logger.debug("tern-notify: outcome", { message, outcome });
 					if (cancelled) return;
 					// Back at the terminal (returned, or clicked through) with the event still
 					// unanswered: hold it again in case you leave. Dismissing it ends tracking.
@@ -338,7 +338,7 @@ export default function desktopNotify(pi: ExtensionAPI) {
 
 	const sendTestPush = async (ctx: ExtensionContext) => {
 		try {
-			await sendToPhone(scope, { title: "omp", message: "Test notification from omp-desktop-notify", urgent: false });
+			await sendToPhone(scope, { title: "omp", message: "Test notification from omp-tern-notify", urgent: false });
 			const off = settings.phone.get(scope) ? "" : " Phone notifications are off: turn them on above to get real ones.";
 			ctx.ui.notify(`Test notification sent to your phone.${off}`, off ? "warning" : "info");
 		} catch (error) {
@@ -352,7 +352,7 @@ export default function desktopNotify(pi: ExtensionAPI) {
 		handler: async (_args, ctx) => {
 			if (!ctx.hasUI) return;
 			const menu: MenuRow[] = [
-				cycle("Desktop notifications", settings.enabled, [true, false], applyBuiltinOverride),
+				cycle("Notifications", settings.enabled, [true, false], applyBuiltinOverride),
 				cycle("When", settings.when, ["away", "always"]),
 				cycle("Tool approvals", settings.approval, [true, false]),
 				cycle("Questions", settings.question, [true, false]),

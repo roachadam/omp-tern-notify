@@ -88,7 +88,7 @@ async function focusTerminal(): Promise<void> {
 const ALERTER_VERSION = "26.5";
 const ALERTER_URL = `https://github.com/vjeantet/alerter/releases/download/v${ALERTER_VERSION}/alerter-${ALERTER_VERSION}.zip`;
 const ALERTER_ZIP_SHA256 = "11f63cddc9bb3f8554ed9b762632a120cfa7bee05e3c09d65734823e09d24f10";
-const ALERTER_DIR = `${homedir()}/Library/Caches/omp-desktop-notify/alerter-${ALERTER_VERSION}`;
+const ALERTER_DIR = `${homedir()}/Library/Caches/omp-tern-notify/alerter-${ALERTER_VERSION}`;
 const ALERTER_PATH = `${ALERTER_DIR}/alerter`;
 const DOWNLOAD_TIMEOUT_MS = 60_000;
 

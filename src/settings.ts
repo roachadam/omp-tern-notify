@@ -17,32 +17,32 @@ function define<const D extends SettingDefinition>(definition: D): Setting<Defin
 	return existing ?? register(definition);
 }
 
-/** Persisted under `desktopNotify.*` in the global config.yml; edited with `/notifications`. */
+/** Persisted under `ternNotify.*` in the global config.yml; edited with `/notifications`. */
 export const settings = {
-	enabled: define({ id: "desktopNotify.enabled", type: "boolean", default: true }),
+	enabled: define({ id: "ternNotify.enabled", type: "boolean", default: true }),
 	/** away: only while the terminal app is not frontmost; always: every time. */
-	when: define({ id: "desktopNotify.when", type: "enum", values: ["away", "always"], default: "away" }),
-	approval: define({ id: "desktopNotify.approval", type: "boolean", default: true }),
-	question: define({ id: "desktopNotify.question", type: "boolean", default: true }),
-	plan: define({ id: "desktopNotify.plan", type: "boolean", default: true }),
-	complete: define({ id: "desktopNotify.complete", type: "boolean", default: true }),
-	error: define({ id: "desktopNotify.error", type: "boolean", default: true }),
+	when: define({ id: "ternNotify.when", type: "enum", values: ["away", "always"], default: "away" }),
+	approval: define({ id: "ternNotify.approval", type: "boolean", default: true }),
+	question: define({ id: "ternNotify.question", type: "boolean", default: true }),
+	plan: define({ id: "ternNotify.plan", type: "boolean", default: true }),
+	complete: define({ id: "ternNotify.complete", type: "boolean", default: true }),
+	error: define({ id: "ternNotify.error", type: "boolean", default: true }),
 	/** Seconds to wait before notifying; nothing is sent if the event is handled first. */
-	delay: define({ id: "desktopNotify.delay", type: "number", default: 3 }),
+	delay: define({ id: "ternNotify.delay", type: "number", default: 3 }),
 	/** Finished turns shorter than this many seconds are not notified. */
-	minTurn: define({ id: "desktopNotify.minTurnSeconds", type: "number", default: 10 }),
+	minTurn: define({ id: "ternNotify.minTurnSeconds", type: "number", default: 10 }),
 	/** Under Tern, turn off omp's built-in OSC 99 notifications, which duplicate Tern's own banners. */
-	replaceBuiltin: define({ id: "desktopNotify.replaceBuiltin", type: "boolean", default: true }),
+	replaceBuiltin: define({ id: "ternNotify.replaceBuiltin", type: "boolean", default: true }),
 
 	/** Also push to your phone through ntfy while you are away from the Mac. */
-	phone: define({ id: "desktopNotify.phone", type: "boolean", default: false }),
+	phone: define({ id: "ternNotify.phone", type: "boolean", default: false }),
 	/** Minutes without keyboard or mouse input (or a locked screen) that count as away from the Mac. */
-	phoneAfterMinutes: define({ id: "desktopNotify.phoneAfterMinutes", type: "number", default: 2 }),
-	ntfyServer: define({ id: "desktopNotify.ntfyServer", type: "string", default: "https://ntfy.sh" }),
+	phoneAfterMinutes: define({ id: "ternNotify.phoneAfterMinutes", type: "number", default: 2 }),
+	ntfyServer: define({ id: "ternNotify.ntfyServer", type: "string", default: "https://ntfy.sh" }),
 	/** Generated on first use. It is the only access control (anyone who knows it can read and post), so it is masked like a secret. */
-	ntfyTopic: define({ id: "desktopNotify.ntfyTopic", type: "string", default: "", credential: true }),
+	ntfyTopic: define({ id: "ternNotify.ntfyTopic", type: "string", default: "", credential: true }),
 	/** Access token for servers that require one (`Authorization: Bearer`). */
-	ntfyToken: define({ id: "desktopNotify.ntfyToken", type: "string", default: "", credential: true }),
+	ntfyToken: define({ id: "ternNotify.ntfyToken", type: "string", default: "", credential: true }),
 };
 
 /** omp's own terminal notifications (OSC 99) that Tern already covers through OSC 7501 program status. */

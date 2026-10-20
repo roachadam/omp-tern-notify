@@ -2,7 +2,7 @@
   "lockfileVersion": 1,
   "workspaces": {
     "": {
-      "name": "omp-desktop-notify",
+      "name": "omp-tern-notify",
       "dependencies": {
         "uqr": "0.1.3",
       },

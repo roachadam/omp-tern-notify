@@ -1,16 +1,16 @@
 {
-	"name": "omp-desktop-notify",
+	"name": "omp-tern-notify",
 	"version": "0.1.0",
-	"description": "macOS desktop notifications for omp: tool approvals, questions, plan reviews and finished turns, only while you're away. Clicking jumps back to the pane in Tern.",
+	"description": "Mac and phone notifications for omp when it needs you: approvals, questions, plan reviews and finished turns. Made for omp running in Tern.",
 	"type": "module",
 	"license": "MIT",
 	"author": "Adam Roach",
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/roachadam/omp-desktop-notify.git"
+		"url": "git+https://github.com/roachadam/omp-tern-notify.git"
 	},
-	"keywords": ["omp", "oh-my-pi", "omp-plugin", "omp-extension", "tern", "notifications", "macos"],
-	"files": ["src", "README.md", "CHANGELOG.md", "LICENSE"],
+	"keywords": ["omp", "oh-my-pi", "omp-plugin", "omp-extension", "tern", "notifications", "macos", "ntfy"],
+	"files": ["src", "README.md", "LICENSE"],
 	"omp": {
 		"extensions": ["./src/index.ts"]
 	},

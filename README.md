@@ -1,4 +1,4 @@
-# omp-desktop-notify
+# omp-tern-notify
 
 Get a notification when [omp](https://github.com/can1357/oh-my-pi) needs you: when it wants approval to run something, asks you a question, has a plan ready, or finishes. Notifications go to your Mac, and to your phone too if you turn that on.
 
@@ -36,7 +36,7 @@ You need:
 Run:
 
 ```sh
-omp plugin install github:roachadam/omp-desktop-notify
+omp plugin install github:roachadam/omp-tern-notify
 ```
 
 Then restart any omp sessions you have open. New sessions pick it up on their own.
@@ -47,7 +47,7 @@ The first time a notification goes out, macOS asks whether Tern (or your termina
 
 Paste this into omp:
 
-> Install the omp plugin from github:roachadam/omp-desktop-notify with `omp plugin install`, then confirm it shows up in `omp plugin list`. If there's an old `desktop-notify.ts` in `~/.omp/agent/extensions/`, ask me before deleting it, because both copies would run and every notification would come twice. When you're done, tell me to restart my omp sessions and to allow notifications for my terminal when macOS asks. If I want notifications on my phone too, explain the steps in the plugin's README under "Phone notifications".
+> Install the omp plugin from github:roachadam/omp-tern-notify with `omp plugin install`, then confirm it shows up in `omp plugin list`. When you're done, tell me to restart my omp sessions and to allow notifications for my terminal when macOS asks. If I want notifications on my phone too, explain the steps in the plugin's README under "Phone notifications".
 
 ## Phone notifications (optional)
 
@@ -72,7 +72,7 @@ Type `/notifications` in omp to change settings. Pick a line to change it.
 
 | Setting | Default | What it does |
 |---|---|---|
-| Desktop notifications | on | Turns the whole plugin on or off |
+| Notifications | on | Turns the whole plugin on or off, phone included |
 | When | away | `away`: only when Tern isn't in front. `always`: every time |
 | Tool approvals, Questions, Plan reviews, Finished turns, Errors | on | Turn each kind of notification on or off |
 | Delay | 3 seconds | How long to wait before notifying |
@@ -81,7 +81,7 @@ Type `/notifications` in omp to change settings. Pick a line to change it.
 | Phone notifications | off | Also send to your phone through ntfy |
 | Phone after Mac idle | 2 minutes | How long without keyboard or mouse before you count as away |
 
-Settings are saved in `~/.omp/agent/config.yml` under `desktopNotify:`, so you can edit them there too. To turn off all notifications for one session, start omp with `PI_NOTIFICATIONS=off`.
+Settings are saved in `~/.omp/agent/config.yml` under `ternNotify:`, so you can edit them there too. To turn off all notifications for one session, start omp with `PI_NOTIFICATIONS=off`.
 
 ## Things to know
 
@@ -111,32 +111,32 @@ iTerm, Terminal, Ghostty, WezTerm, Warp, kitty and VS Code (including Cursor and
 
 ## How it works
 
-macOS only shows notifications from apps it trusts. This plugin uses [alerter](https://github.com/vjeantet/alerter), a small, signed helper that sends notifications on behalf of another app (here, Tern). On first use the plugin downloads alerter v26.5 from GitHub, checks that the file is exactly the expected one, and keeps it in `~/Library/Caches/omp-desktop-notify/`.
+macOS only shows notifications from apps it trusts. This plugin uses [alerter](https://github.com/vjeantet/alerter), a small, signed helper that sends notifications on behalf of another app (here, Tern). On first use the plugin downloads alerter v26.5 from GitHub, checks that the file is exactly the expected one, and keeps it in `~/Library/Caches/omp-tern-notify/`.
 
 To decide when to notify, the plugin checks which app is in front, and how long it's been since you touched the keyboard or mouse. It only checks while something is waiting.
 
 ## Uninstall
 
 ```sh
-omp plugin uninstall omp-desktop-notify
-rm -rf ~/Library/Caches/omp-desktop-notify
+omp plugin uninstall omp-tern-notify
+rm -rf ~/Library/Caches/omp-tern-notify
 ```
 
-If you changed any settings, also delete the `desktopNotify:` section from `~/.omp/agent/config.yml`.
+If you changed any settings, also delete the `ternNotify:` section from `~/.omp/agent/config.yml`.
 
 ## Development
 
 Linux and Windows support would be a welcome contribution. Most of the plugin already works anywhere; the parts that need a version per platform are in `src/macos.ts`: showing and removing a notification, telling whether Tern is in front, and telling whether you're away from the computer. Phone notifications only need the last one. If you take this on, please test it on the real platform and open a pull request.
 
 ```sh
-git clone https://github.com/roachadam/omp-desktop-notify
-cd omp-desktop-notify
+git clone https://github.com/roachadam/omp-tern-notify
+cd omp-tern-notify
 bun install
 bun run typecheck
 omp plugin link .
 ```
 
-`omp plugin link .` makes omp load your local copy. Restart omp after you change something. The plugin writes debug lines starting with `desktop-notify:` to omp's logs in `~/.omp/logs/`.
+`omp plugin link .` makes omp load your local copy. Restart omp after you change something. The plugin writes debug lines starting with `tern-notify:` to omp's logs in `~/.omp/logs/`.
 
 | File | What's in it |
 |---|---|
