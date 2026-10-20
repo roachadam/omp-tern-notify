@@ -79,7 +79,7 @@ Setting `PI_NOTIFICATIONS=off` in the environment turns all notifications off, t
 
 **Privacy:** each push contains the session name and the notification text (tool names, question text), and it goes through ntfy's servers. Anyone who knows a topic name can read it, so the plugin generates a random 30-character topic; keep it private. For full control, [self-host ntfy](https://docs.ntfy.sh/install/), set `ntfyServer`, and set `ntfyToken` if your server requires an access token.
 
-Tapping a phone notification opens the ntfy app. Tern's mobile app has no link that opens a particular pane, so a tap can't take you to the session.
+**Tapping a phone notification** opens the Tern app when omp runs in Tern; iOS asks you to confirm first. It can't open the session's pane, because Tern's links only carry pairing codes. In other terminals, tapping opens the ntfy app.
 
 ## How notifications are posted
 

@@ -3,6 +3,7 @@
  * Android apps. Messages are posted to a topic; the phone app subscribes to the same topic.
  */
 import type { ScopeLike } from "@oh-my-pi/pi-coding-agent/config/registry";
+import { isTern } from "./macos.ts";
 import { settings } from "./settings.ts";
 
 const REQUEST_TIMEOUT_MS = 10_000;
@@ -50,6 +51,12 @@ export interface PhoneMessage {
 	urgent: boolean;
 }
 
+/**
+ * Tapping opens the Tern app when omp runs in Tern. Tern's links only carry pairing codes, so
+ * this opens the app (iOS asks first) but cannot select the session's pane.
+ */
+const TERN_APP_LINK = "tern://";
+
 export async function sendToPhone(scope: ScopeLike, message: PhoneMessage): Promise<void> {
 	const token = settings.ntfyToken.get(scope)?.trim();
 	const response = await fetch(ntfyServer(scope), {
@@ -61,6 +68,7 @@ export async function sendToPhone(scope: ScopeLike, message: PhoneMessage): Prom
 			message: message.message,
 			priority: message.urgent ? 4 : 3,
 			tags: [message.urgent ? "bell" : "white_check_mark"],
+			...(isTern ? { click: TERN_APP_LINK } : {}),
 		}),
 		signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
 	});
