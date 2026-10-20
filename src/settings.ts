@@ -52,7 +52,8 @@ export const BUILTIN_TERMINAL_NOTIFY = ["completion.notify", "ask.notify", "erro
 export interface MenuRow {
 	label: string;
 	display(scope: ScopeLike): string;
-	select(scope: ScopeLike): void | Promise<void>;
+	/** Returning "close" closes the menu, e.g. so something shown above the prompt is not blurred by it. */
+	select(scope: ScopeLike): void | "close" | Promise<void | "close">;
 }
 
 const show = (value: unknown) => (value === true ? "on" : value === false ? "off" : String(value));

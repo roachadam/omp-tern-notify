@@ -69,9 +69,9 @@ Setting `PI_NOTIFICATIONS=off` in the environment turns all notifications off, t
 [ntfy](https://ntfy.sh) is a free, open-source push service with [iOS](https://apps.apple.com/app/ntfy/id1625396347) and [Android](https://play.google.com/store/apps/details?id=io.heckel.ntfy) apps. The plugin posts to a topic, and your phone subscribes to the same topic.
 
 1. Install the ntfy app on your phone.
-2. In omp, run `/notifications` and turn on **Phone notifications (ntfy)**. A QR code and a link appear above the prompt.
+2. In omp, run `/notifications` and turn on **Phone notifications (ntfy)**. The menu closes, and a QR code and link appear above the prompt. They stay until you send your next message, or for 5 minutes. **Show phone QR code** brings them back.
 3. Scan the code or open the link on your phone, then subscribe to the topic in the ntfy app. You can also add the topic by hand in the app.
-4. Confirm the test notification, and check it arrives.
+4. Run `/notifications` › **Send test notification**, and check it arrives.
 
 **When the phone gets one:** you count as away from the Mac when the screen is locked, or when there has been no keyboard or mouse input for `phoneAfterMinutes`. An approval, question or plan review is pushed as soon as you're away and it's still unanswered, at high priority. A finished turn or error is pushed only if you were already away when it happened. Each event goes to the phone at most once, and the per-event switches apply here too.
 

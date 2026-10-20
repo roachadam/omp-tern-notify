@@ -28,6 +28,8 @@ const PHONE_POLL_MS = 5000;
 /** Slot key for finished-turn and error notifications. */
 const TURN_KEY = "turn";
 const QR_WIDGET = "desktop-notify-qr";
+/** How long the phone setup QR code stays above the prompt if you send nothing. */
+const QR_VISIBLE_MS = 5 * 60_000;
 
 function truncate(text: string, max = 180): string {
 	const flat = text.replace(/\s+/g, " ").trim();
@@ -253,25 +255,43 @@ export default function desktopNotify(pi: ExtensionAPI) {
 	});
 	pi.on("session_shutdown", cancelAll);
 
-	/** Shows how to subscribe a phone (link and QR code above the prompt), then offers a test push. */
-	const phoneSetup = async (ctx: ExtensionCommandContext) => {
+	let hideQrTimer: (() => void) | undefined;
+	const hideQr = (ctx: ExtensionContext) => {
+		hideQrTimer?.();
+		hideQrTimer = undefined;
+		ctx.ui.setWidget(QR_WIDGET, undefined);
+	};
+
+	/**
+	 * Shows how to subscribe a phone: a link and QR code above the prompt, left there until your
+	 * next message or for QR_VISIBLE_MS. The menu closes first, because Tern blurs everything
+	 * behind an open dialog, which would make the code unscannable.
+	 */
+	const showPhoneQr = (ctx: ExtensionContext): "close" => {
 		const url = subscribeUrl(scope);
 		const qr = renderUnicodeCompact(url, { border: 1 }).split("\n");
+		hideQr(ctx);
 		ctx.ui.setWidget(QR_WIDGET, [
 			"Phone notifications: install the ntfy app (iOS or Android), then scan this or open the link on your phone,",
 			`or add topic ${ntfyTopic(scope)} on server ${ntfyServer(scope)} in the app.`,
+			"Then run /notifications › Send test notification. This goes away when you send your next message.",
 			url,
 			...qr,
 		]);
+		const timer = ctx.setTimeout(() => hideQr(ctx), QR_VISIBLE_MS);
+		hideQrTimer = () => ctx.clearTimer(timer);
+		return "close";
+	};
+	pi.on("input", (_event, ctx) => {
+		if (hideQrTimer) hideQr(ctx);
+	});
+
+	const sendTestPush = async (ctx: ExtensionContext) => {
 		try {
-			const test = await ctx.ui.confirm("Phone notifications", "Subscribed? Send a test notification to your phone now?");
-			if (!test) return;
 			await sendToPhone(scope, { title: "omp", message: "Test notification from omp-desktop-notify", urgent: false });
-			ctx.ui.notify("Test notification sent", "info");
+			ctx.ui.notify("Test notification sent to your phone", "info");
 		} catch (error) {
 			ctx.ui.notify(`Phone test failed: ${error instanceof Error ? error.message : String(error)}`, "error");
-		} finally {
-			ctx.ui.setWidget(QR_WIDGET, undefined);
 		}
 	};
 
@@ -294,21 +314,22 @@ export default function desktopNotify(pi: ExtensionAPI) {
 				{
 					label: "Phone notifications (ntfy)",
 					display: s => (settings.phone.get(s) ? "on" : "off"),
-					select: async s => {
+					select: s => {
 						const on = !settings.phone.get(s);
 						settings.phone.set(s, on);
-						if (on) await phoneSetup(ctx);
+						if (on) return showPhoneQr(ctx);
 					},
 				},
 				cycle("Phone after Mac idle (minutes)", settings.phoneAfterMinutes, [1, 2, 5, 10]),
-				{ label: "Phone setup and test", display: () => "QR code, link, test push", select: () => phoneSetup(ctx) },
+				{ label: "Show phone QR code", display: () => "link and code to subscribe", select: () => showPhoneQr(ctx) },
+				{ label: "Send test notification", display: () => "to your phone", select: () => sendTestPush(ctx) },
 			];
 			for (;;) {
 				const options = menu.map(row => `${row.label}: ${row.display(scope)}`);
 				const picked = await ctx.ui.select("Notifications (select to change, Esc to close)", options);
 				const row = picked === undefined ? undefined : menu[options.indexOf(picked)];
 				if (!row) return;
-				await row.select(scope);
+				if ((await row.select(scope)) === "close") return;
 			}
 		},
 	});
