@@ -1,0 +1,25 @@
+{
+	"name": "omp-desktop-notify",
+	"version": "0.1.0",
+	"description": "macOS desktop notifications for omp: tool approvals, questions, plan reviews and finished turns, only while you're away. Clicking jumps back to the pane in Tern.",
+	"type": "module",
+	"license": "MIT",
+	"author": "Adam Roach",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/roachadam/omp-desktop-notify.git"
+	},
+	"keywords": ["omp", "oh-my-pi", "omp-plugin", "omp-extension", "tern", "notifications", "macos"],
+	"files": ["src", "README.md", "CHANGELOG.md", "LICENSE"],
+	"omp": {
+		"extensions": ["./src/index.ts"]
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit"
+	},
+	"devDependencies": {
+		"@oh-my-pi/pi-coding-agent": "18.12.3",
+		"@types/bun": "^1.3.0",
+		"typescript": "^5.9.0"
+	}
+}
