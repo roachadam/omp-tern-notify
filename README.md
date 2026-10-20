@@ -71,13 +71,13 @@ Setting `PI_NOTIFICATIONS=off` in the environment turns all notifications off, t
 1. Install the ntfy app on your phone.
 2. In omp, run `/notifications` and turn on **Phone notifications (ntfy)**. The menu closes, the topic is copied to your Mac's clipboard, and setup instructions with a QR code appear above the prompt. They stay until you send your next message, or for 5 minutes. **Subscribe a phone** brings them back.
 3. Subscribe:
-   - **iPhone:** in the ntfy app, tap **+** and paste. Universal Clipboard carries the topic over from the Mac (same Apple ID, Handoff on). The iOS app has no link handler, so a QR code can't subscribe it.
+   - **iPhone:** in the ntfy app, tap **+** and paste. Universal Clipboard carries the topic over from the Mac (same Apple ID, Handoff on in both devices' settings). Without Handoff, type it: topics are short words, like `omp-cider-flock-mango-perch-vigor-4821`. The iOS app has no link handler, so a QR code can't subscribe it.
    - **Android:** scan the QR code. It's an `ntfy://` link that subscribes the app directly.
 4. Run `/notifications` › **Send test notification**, and check it arrives.
 
 **When the phone gets one:** you count as away from the Mac when the screen is locked, or when there has been no keyboard or mouse input for `phoneAfterMinutes`. An approval, question or plan review is pushed as soon as you're away and it's still unanswered, at high priority. A finished turn or error is pushed only if you were already away when it happened. Each event goes to the phone at most once, and the per-event switches apply here too.
 
-**Privacy:** each push contains the session name and the notification text (tool names, question text), and it goes through ntfy's servers. Anyone who knows a topic name can read it, so the plugin generates a random 30-character topic; keep it private. For full control, [self-host ntfy](https://docs.ntfy.sh/install/), set `ntfyServer`, and set `ntfyToken` if your server requires an access token.
+**Privacy and security:** each push contains the session name and the notification text (tool names, question text), and it goes through ntfy's servers. ntfy topics have no password: anyone who knows the name can read your notifications and send fake ones to your phone, including ones whose tap opens a link of their choosing. The plugin makes the name unguessable: five random words from a 1,296-word list plus four digits, about 65 bits. Topics can't be listed, and ntfy.sh limits how fast anyone can try names, so guessing one isn't practical. Keep it private. If it leaks, `/notifications` › **New phone topic** replaces it. For full control, [self-host ntfy](https://docs.ntfy.sh/install/), set `ntfyServer`, and set `ntfyToken` if your server requires an access token.
 
 **Tapping a phone notification** opens the Tern app when omp runs in Tern; iOS asks you to confirm first. It can't open the session's pane, because Tern's links only carry pairing codes. In other terminals, tapping opens the ntfy app.
 
@@ -123,4 +123,4 @@ omp plugin link .      # load this checkout into omp
 
 ## License
 
-MIT
+MIT. Phone topics use the [EFF Short Wordlist](https://www.eff.org/dice) by the Electronic Frontier Foundation, licensed [CC BY 3.0 US](https://creativecommons.org/licenses/by/3.0/us/).

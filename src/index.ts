@@ -358,6 +358,19 @@ export default function desktopNotify(pi: ExtensionAPI) {
 				cycle("Phone after Mac idle (minutes)", settings.phoneAfterMinutes, [1, 2, 5, 10]),
 				{ label: "Subscribe a phone", display: () => "copy topic, Android QR code", select: () => showPhoneQr(ctx) },
 				{ label: "Send test notification", display: () => "to your phone", select: () => sendTestPush(ctx) },
+				{
+					label: "New phone topic",
+					display: () => "replace the topic; resubscribe your phone",
+					select: async () => {
+						const ok = await ctx.ui.confirm(
+							"New phone topic",
+							"Your phone stops getting notifications until you subscribe it to the new topic. Continue?",
+						);
+						if (!ok) return;
+						settings.ntfyTopic.set(scope, ""); // the next read generates a fresh one
+						return showPhoneQr(ctx);
+					},
+				},
 			];
 			for (;;) {
 				const options = menu.map(row => `${row.label}: ${row.display(scope)}`);

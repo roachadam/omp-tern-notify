@@ -5,19 +5,34 @@
 import type { ScopeLike } from "@oh-my-pi/pi-coding-agent/config/registry";
 import { isTern } from "./macos.ts";
 import { settings } from "./settings.ts";
+import { WORDS } from "./wordlist.ts";
 
 const REQUEST_TIMEOUT_MS = 10_000;
-const TOPIC_ALPHABET = "abcdefghijklmnopqrstuvwxyz234567";
+/** 5 words of 1,296 (51.7 bits) plus 4 digits (13.3 bits): about 65 bits, typeable on a phone. */
+const TOPIC_WORDS = 5;
+const TOPIC_DIGITS = 4;
+
+/** A uniformly random integer in [0, n), by rejection sampling so no value is favoured. */
+function randomBelow(n: number): number {
+	const limit = Math.floor(0x1_0000_0000 / n) * n;
+	const buffer = new Uint32Array(1);
+	for (;;) {
+		crypto.getRandomValues(buffer);
+		if (buffer[0]! < limit) return buffer[0]! % n;
+	}
+}
 
 /**
- * The configured topic, generated and saved on first use. ntfy topics are readable by anyone who
- * knows the name, so it is long and random: 26 characters of base32, 130 bits.
+ * The configured topic, generated and saved on first use, e.g. `omp-cider-flock-mango-perch-vigor-4821`.
+ * ntfy topics are readable, and writable, by anyone who knows the name, so it must be unguessable:
+ * about 65 bits, far beyond what ntfy.sh's per-IP rate limits allow anyone to search.
  */
 export function ntfyTopic(scope: ScopeLike): string {
 	const existing = settings.ntfyTopic.get(scope)?.trim();
 	if (existing) return existing;
-	const random = crypto.getRandomValues(new Uint8Array(26));
-	const topic = `omp-${Array.from(random, byte => TOPIC_ALPHABET[byte % 32]).join("")}`;
+	const words = Array.from({ length: TOPIC_WORDS }, () => WORDS[randomBelow(WORDS.length)]);
+	const digits = String(randomBelow(10 ** TOPIC_DIGITS)).padStart(TOPIC_DIGITS, "0");
+	const topic = `omp-${words.join("-")}-${digits}`;
 	settings.ntfyTopic.set(scope, topic);
 	return topic;
 }
