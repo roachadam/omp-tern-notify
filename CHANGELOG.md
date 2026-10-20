@@ -4,10 +4,10 @@
 
 First release.
 
-- Notifies for tool approvals, `ask` questions, plan reviews, finished turns and errors, through alerter v26.5 (downloaded on first use and checked against a pinned SHA-256).
-- Only while the terminal app isn't in front, after a 3-second delay. Approvals, questions and plan reviews that come up while you're in the terminal are held and posted if you leave without answering.
-- Notifications are removed once their event is handled, when omp exits, or when you return to the terminal.
-- Clicking a notification brings the terminal forward; in Tern it also focuses the omp pane.
-- Under Tern, notifications carry Tern's name and icon, and omp's duplicate built-in notifications are switched off.
-- Optional phone notifications through ntfy once you're away from the Mac (screen locked, or idle for 2 minutes). Setup shows a QR code and sends a test push.
-- `/notifications` menu and `desktopNotify.*` settings.
+- Mac notifications when omp wants approval, asks a question, has a plan ready, finishes, or stops with an error.
+- Only while Tern (or your terminal) isn't in front, after a 3-second wait. If omp is still waiting on you when you switch away, the notification shows up then.
+- Notifications disappear once you answer, start a new message, quit omp, or come back to Tern.
+- Clicking a notification brings Tern forward and opens the pane that sent it.
+- In Tern, notifications show Tern's name and icon, and omp's own built-in alerts are turned off so you don't see everything twice.
+- Optional phone notifications through ntfy once you've left the Mac (screen locked, or 2 minutes without keyboard or mouse). Easy setup: the topic is copied for iPhone, and Android gets a QR code. Includes a test button and a way to switch to a new topic. Tapping one opens the Tern app.
+- `/notifications` menu for all settings.

@@ -85,14 +85,15 @@ export default function desktopNotify(pi: ExtensionAPI) {
 	/** Set by an agent_end that will continue, so the next agent_start keeps the turn's start time. */
 	let continuing = false;
 	let overridingBuiltins = false;
-	let warned = false;
+	/** Channels that have already shown their one in-session warning; later failures go to the log only. */
+	const warned = new Set<"mac" | "phone">();
 
-	const warnOnce = (ctx: ExtensionContext, error: unknown) => {
+	const warnOnce = (ctx: ExtensionContext, channel: "mac" | "phone", error: unknown) => {
 		const message = error instanceof Error ? error.message : String(error);
-		pi.logger.warn("desktop-notify", { message });
-		if (warned) return;
-		warned = true;
-		ctx.ui.notify(`Desktop notifications: ${message}`, "warning");
+		pi.logger.warn("desktop-notify", { channel, message });
+		if (warned.has(channel)) return;
+		warned.add(channel);
+		ctx.ui.notify(`${channel === "mac" ? "Desktop" : "Phone"} notifications: ${message}`, "warning");
 	};
 
 	/** The event was handled: drop its queued or held notification and retract a posted one. */
@@ -112,21 +113,32 @@ export default function desktopNotify(pi: ExtensionAPI) {
 		cancel(key);
 
 		let cancelled = false;
+		/** Set once the phone no longer needs this event: sent, cancelled, or seen at the Mac. */
+		let phoneDone = false;
 		/** Undoes the current stage: clears its timer or retracts its notification. */
 		let stop = () => {};
 		/** Stops waiting to escalate the event to the phone. */
 		let stopPhone = () => {};
+		const endPhone = () => {
+			phoneDone = true;
+			stopPhone();
+		};
 		const slot = {
 			cancel: () => {
 				cancelled = true;
 				stop();
-				stopPhone();
+				endPhone();
 			},
 		};
 		slots.set(key, slot);
+		/**
+		 * The Mac side is done with the event. A waiting event clicked or dismissed at the Mac has
+		 * been seen, so the phone does not need it either; a finished turn or error still gets its
+		 * one away-from-Mac check (you may have left with the terminal in front).
+		 */
 		const finish = () => {
 			stop();
-			if (waiting) stopPhone(); // dismissed or clicked at the Mac: you have seen it
+			if (waiting) endPhone();
 			if (slots.get(key) === slot) slots.delete(key);
 		};
 		// Session titles may lead with Nerd Font icons (Unicode private-use code points), which
@@ -141,18 +153,20 @@ export default function desktopNotify(pi: ExtensionAPI) {
 			if (!settings.phone.get(scope)) return;
 			const idleSeconds = Math.max(0, settings.phoneAfterMinutes.get(scope)) * 60;
 			const send = () => {
+				phoneDone = true;
+				if (!settings.phone.get(scope)) return; // switched off while this event waited
 				pi.logger.debug("desktop-notify: sending to phone", { body });
 				sendToPhone(scope, { title: sessionName(), message: truncate(body), urgent: waiting }).catch(error =>
-					warnOnce(ctx, error),
+					warnOnce(ctx, "phone", error),
 				);
 			};
 			const away = await awayFromMac(idleSeconds);
-			if (cancelled) return;
+			if (phoneDone) return;
 			if (away) return send();
 			if (!waiting) return;
 			let checking = false;
 			const timer = ctx.setInterval(async () => {
-				if (cancelled) {
+				if (phoneDone) {
 					ctx.clearTimer(timer);
 					return;
 				}
@@ -161,7 +175,7 @@ export default function desktopNotify(pi: ExtensionAPI) {
 				const nowAway = await awayFromMac(idleSeconds).finally(() => {
 					checking = false;
 				});
-				if (cancelled || !nowAway) return;
+				if (phoneDone || !nowAway) return;
 				ctx.clearTimer(timer);
 				send();
 			}, PHONE_POLL_MS);
@@ -229,15 +243,17 @@ export default function desktopNotify(pi: ExtensionAPI) {
 					else finish();
 				},
 				error => {
-					warnOnce(ctx, error);
-					finish();
+					// The Mac notification failed; the phone stage and the event's own handling go on.
+					warnOnce(ctx, "mac", error);
+					stop();
+					if (!waiting) finish();
 				},
 			);
 		};
 
 		const delayMs = Math.max(0, settings.delay.get(scope)) * 1000;
 		const timer = ctx.setTimeout(async () => {
-			escalateToPhone().catch(error => warnOnce(ctx, error));
+			escalateToPhone().catch(error => warnOnce(ctx, "phone", error));
 			// An unidentified terminal cannot be checked, so it is notified as if `when` were "always".
 			const front = terminal ? await terminalIsFrontmost() : false;
 			if (cancelled) return;
@@ -273,7 +289,7 @@ export default function desktopNotify(pi: ExtensionAPI) {
 		if (ctx.agent.kind !== "main") return;
 		applyBuiltinOverride();
 		// Fetch alerter now, so the first notification is not held up by the download.
-		if (settings.enabled.get(scope) && ctx.mode === "tui") ensureAlerter().catch(error => warnOnce(ctx, error));
+		if (settings.enabled.get(scope) && ctx.mode === "tui") ensureAlerter().catch(error => warnOnce(ctx, "mac", error));
 	});
 	pi.on("session_shutdown", cancelAll);
 
@@ -296,7 +312,7 @@ export default function desktopNotify(pi: ExtensionAPI) {
 		const topic = ntfyTopic(scope);
 		const server = ntfyServer(scope);
 		const customServer = server !== "https://ntfy.sh" ? `, with server ${server}` : "";
-		copyTopic(scope).catch(error => warnOnce(ctx, error));
+		copyTopic(scope).catch(error => warnOnce(ctx, "phone", error));
 		const text = [
 			"Phone notifications. Install the ntfy app, then:",
 			`  iPhone: in ntfy tap + and paste${customServer}. The topic is on your clipboard (Universal Clipboard).`,

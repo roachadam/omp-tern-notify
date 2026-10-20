@@ -39,8 +39,8 @@ export const settings = {
 	/** Minutes without keyboard or mouse input (or a locked screen) that count as away from the Mac. */
 	phoneAfterMinutes: define({ id: "desktopNotify.phoneAfterMinutes", type: "number", default: 2 }),
 	ntfyServer: define({ id: "desktopNotify.ntfyServer", type: "string", default: "https://ntfy.sh" }),
-	/** Generated on first use; anyone who knows it can read and post to it. */
-	ntfyTopic: define({ id: "desktopNotify.ntfyTopic", type: "string", default: "" }),
+	/** Generated on first use. It is the only access control (anyone who knows it can read and post), so it is masked like a secret. */
+	ntfyTopic: define({ id: "desktopNotify.ntfyTopic", type: "string", default: "", credential: true }),
 	/** Access token for servers that require one (`Authorization: Bearer`). */
 	ntfyToken: define({ id: "desktopNotify.ntfyToken", type: "string", default: "", credential: true }),
 };

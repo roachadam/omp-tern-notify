@@ -37,8 +37,11 @@ export function ntfyTopic(scope: ScopeLike): string {
 	return topic;
 }
 
+/** The configured server as a base URL; a bare host name (`ntfy.example.com`) means https. */
 export function ntfyServer(scope: ScopeLike): string {
-	return (settings.ntfyServer.get(scope)?.trim() || "https://ntfy.sh").replace(/\/+$/, "");
+	const configured = settings.ntfyServer.get(scope)?.trim() || "https://ntfy.sh";
+	const withScheme = /^https?:\/\//i.test(configured) ? configured : `https://${configured}`;
+	return withScheme.replace(/\/+$/, "");
 }
 
 /**

@@ -1,104 +1,117 @@
 # omp-desktop-notify
 
-macOS desktop notifications for [omp](https://github.com/can1357/oh-my-pi), with optional push to your phone. You get one when the agent needs you: a tool call waits for approval, a question waits for an answer, a plan waits for review, or a turn finishes or fails. Notifications are sent only while you're away from the terminal, and they get out of the way once you're back. Leave the Mac entirely and they can follow you to your phone.
+Get a notification when [omp](https://github.com/can1357/oh-my-pi) needs you: when it wants approval to run something, asks you a question, has a plan ready, or finishes. Notifications go to your Mac, and to your phone too if you turn that on.
 
-Built for [Tern](https://stencil.so/tern), where notifications show up under Tern's name and icon, and clicking one jumps to the exact omp pane. It also works in iTerm, Terminal, Ghostty, WezTerm, Warp, kitty and VS Code.
+It's made for **omp running inside [Tern](https://stencil.so/tern)** on a Mac. That's where it works best: notifications show up as coming from Tern, and clicking one takes you straight to the right pane. It works in other Mac terminals too, with a few things missing (see [Other terminals](#other-terminals)).
+
+This is a community plugin. It isn't made by the omp or Tern teams.
 
 ## What it does
 
-| Event | Notification |
+| When | You get |
 |---|---|
-| A tool call needs approval | `Approval needed: bash` |
-| The `ask` tool waits for an answer | `Waiting for input: <question>` |
-| A plan is ready for review | `Plan ready for review: <title>` |
-| A turn finishes (10 s or longer by default) | `Complete` |
-| A run stops with an error | `Stopped with error` |
+| omp wants approval to run a tool | `Approval needed: bash` |
+| omp asks you a question | `Waiting for input: <the question>` |
+| A plan is ready for review | `Plan ready for review` |
+| omp finishes something that took 10 seconds or more | `Complete` |
+| omp stops with an error | `Stopped with error` |
 
-Each notification shows the terminal's name as its title, with the session name below it.
+It tries not to bother you:
 
-- **Away only.** If the terminal is the frontmost app, nothing is posted. If an approval, question or plan review is still unanswered when you switch away, it's posted then.
-- **Grace delay.** Each event waits 3 seconds first. If you answer or come back in that time, nothing is sent.
-- **Cleans up after itself.** A notification is removed once you answer in omp, start a new prompt, quit omp or switch back to the terminal. If an approval or question is still unanswered and you leave again, it's posted again.
-- **Click to return.** Clicking brings the terminal forward. In Tern it also focuses the pane that sent the notification.
-- **No duplicates in Tern.** Tern already shows its own banners and inbox entries for omp's status (OSC 7501). Under Tern, omp's built-in notifications (OSC 99) would repeat them, so the plugin switches those off for the session. Other terminals keep them, because there they're the only signal inside the terminal.
-- **Phone, when you've left the Mac (optional).** Through [ntfy](https://ntfy.sh). An unanswered approval, question or plan review goes to your phone once the screen locks or you've been idle for 2 minutes. A finished turn or error goes there only if you were already away when it happened. See [Phone notifications](#phone-notifications).
-
-## Requirements
-
-- macOS 13 or later
-- omp 18.12 or later
-- A network connection on first use, to fetch [alerter](#how-notifications-are-posted)
+- **Only when you're not looking.** If Tern is the app in front, you won't get a Mac notification; Tern's own banner already shows it. If omp is still waiting on you when you switch away, the notification shows up then.
+- **A short wait first.** It waits 3 seconds before notifying. If you answer in that time, nothing is sent.
+- **It cleans up.** The notification disappears once you answer, start a new message, or come back to Tern. If omp is still waiting and you leave again, it comes back.
+- **Click to go back.** Clicking a notification brings Tern to the front and opens the pane that sent it.
 
 ## Install
+
+You need:
+
+- A Mac running macOS 13 or later
+- omp 18.12 or later
+- An internet connection the first time (it downloads a small helper app, see [How it works](#how-it-works))
+
+Run:
 
 ```sh
 omp plugin install github:roachadam/omp-desktop-notify
 ```
 
-New omp sessions load it automatically; restart any open ones. The first notification makes macOS ask whether your terminal may send notifications. Allow it, or turn it on later in **System Settings › Notifications › <your terminal>**.
+Then restart any omp sessions you have open. New sessions pick it up on their own.
 
-If you previously copied a `desktop-notify.ts` into `~/.omp/agent/extensions/`, delete it. Otherwise both copies run and every notification is sent twice.
+The first time a notification goes out, macOS asks whether Tern (or your terminal) can send notifications. Click **Allow**. If you missed it, turn it on in **System Settings › Notifications › Tern**.
+
+### Or ask omp to do it
+
+Paste this into omp:
+
+> Install the omp plugin from github:roachadam/omp-desktop-notify with `omp plugin install`, then confirm it shows up in `omp plugin list`. If there's an old `desktop-notify.ts` in `~/.omp/agent/extensions/`, ask me before deleting it, because both copies would run and every notification would come twice. When you're done, tell me to restart my omp sessions and to allow notifications for my terminal when macOS asks. If I want notifications on my phone too, explain the steps in the plugin's README under "Phone notifications".
+
+## Phone notifications (optional)
+
+Phone notifications go through [ntfy](https://ntfy.sh), a free, open-source notification app for iPhone and Android. You don't need an account.
+
+Your phone only gets one when you've stepped away from the Mac, meaning the screen is locked or you haven't touched the keyboard or mouse for 2 minutes. If omp is waiting on an answer, it reaches your phone as soon as you're away. A "Complete" or error only goes to your phone if you were already away when it happened.
+
+To set it up:
+
+1. Install the ntfy app on your phone ([iPhone](https://apps.apple.com/app/ntfy/id1625396347), [Android](https://play.google.com/store/apps/details?id=io.heckel.ntfy)).
+2. In omp, type `/notifications` and turn on **Phone notifications (ntfy)**. The menu closes and setup instructions appear above where you type.
+3. Subscribe your phone:
+   - **iPhone:** the topic name is already copied on your Mac. In ntfy, tap **+** and paste. This works through Apple's Universal Clipboard, which needs the same Apple ID on both devices and Handoff turned on (Mac: **System Settings › General › AirDrop & Handoff**; iPhone: **Settings › General › AirPlay & Continuity**). No Handoff? Just type it in. It's a few short words, like `omp-cider-flock-mango-perch-vigor-4821`.
+   - **Android:** scan the QR code with your camera. It opens ntfy and subscribes for you.
+4. Type `/notifications` again and pick **Send test notification** to check it works.
+
+Tapping a phone notification opens the Tern app (your phone asks first). If you click or dismiss the Mac notification before you leave, the phone won't get that one; you've already seen it.
 
 ## Settings
 
-Run `/notifications` in omp. Selecting a row moves it to its next value. Values are saved to `~/.omp/agent/config.yml`, so you can also edit them there:
+Type `/notifications` in omp to change settings. Pick a line to change it.
 
-```yaml
-desktopNotify:
-  enabled: true          # master switch
-  when: away             # away | always
-  approval: true
-  question: true
-  plan: true
-  complete: true
-  error: true
-  delay: 3               # seconds to wait before notifying
-  minTurnSeconds: 10     # skip "Complete" for shorter turns
-  replaceBuiltin: true   # Tern only: turn off omp's duplicate OSC 99 notifications
-  phone: false           # also push to your phone through ntfy
-  phoneAfterMinutes: 2   # Mac idle time that counts as away (a locked screen counts at once)
-  ntfyServer: https://ntfy.sh
-  ntfyTopic: ""          # generated on first use
-  ntfyToken: ""          # for servers that require an access token
-```
+| Setting | Default | What it does |
+|---|---|---|
+| Desktop notifications | on | Turns the whole plugin on or off |
+| When | away | `away`: only when Tern isn't in front. `always`: every time |
+| Tool approvals, Questions, Plan reviews, Finished turns, Errors | on | Turn each kind of notification on or off |
+| Delay | 3 seconds | How long to wait before notifying |
+| Minimum turn length | 10 seconds | Skip "Complete" for quick replies |
+| Replace terminal notifications | on | In Tern only, turns off omp's own built-in alerts so you don't see everything twice |
+| Phone notifications | off | Also send to your phone through ntfy |
+| Phone after Mac idle | 2 minutes | How long without keyboard or mouse before you count as away |
 
-Setting `PI_NOTIFICATIONS=off` in the environment turns all notifications off, the same as omp's built-in ones.
+Settings are saved in `~/.omp/agent/config.yml` under `desktopNotify:`, so you can edit them there too. To turn off all notifications for one session, start omp with `PI_NOTIFICATIONS=off`.
 
-## Phone notifications
+## Things to know
 
-[ntfy](https://ntfy.sh) is a free, open-source push service with [iOS](https://apps.apple.com/app/ntfy/id1625396347) and [Android](https://play.google.com/store/apps/details?id=io.heckel.ntfy) apps. The plugin posts to a topic, and your phone subscribes to the same topic.
+- **Mac only.** On Linux and Windows the plugin does nothing.
+- **It leans on an old macOS feature.** Showing notifications as Tern (with Tern's name and icon) uses a trick Apple no longer documents. It works today (tested on macOS 27), but a future macOS update could break it.
+- **Clicking only works while omp is running.** If you quit omp, its notifications are removed too.
+- **Phone notifications can't be taken back.** Once one is sent, it stays in the ntfy app even after you answer on the Mac.
+- **Tapping a phone notification can't open the right pane.** It opens the Tern app, and that's it. Tern doesn't have a link that opens a specific pane yet.
+- **Not over SSH.** If you run omp on a Mac over SSH, the plugin turns itself off, because the notifications would show up on that Mac and not in front of you.
+- **Only omp's own prompts.** It doesn't know about pop-ups that other omp plugins show.
 
-1. Install the ntfy app on your phone.
-2. In omp, run `/notifications` and turn on **Phone notifications (ntfy)**. The menu closes, the topic is copied to your Mac's clipboard, and setup instructions with a QR code appear above the prompt. They stay until you send your next message, or for 5 minutes. **Subscribe a phone** brings them back.
-3. Subscribe:
-   - **iPhone:** in the ntfy app, tap **+** and paste. Universal Clipboard carries the topic over from the Mac (same Apple ID, Handoff on in both devices' settings). Without Handoff, type it: topics are short words, like `omp-cider-flock-mango-perch-vigor-4821`. The iOS app has no link handler, so a QR code can't subscribe it.
-   - **Android:** scan the QR code. It's an `ntfy://` link that subscribes the app directly.
-4. Run `/notifications` › **Send test notification**, and check it arrives.
+### Other terminals
 
-**When the phone gets one:** you count as away from the Mac when the screen is locked, or when there has been no keyboard or mouse input for `phoneAfterMinutes`. An approval, question or plan review is pushed as soon as you're away and it's still unanswered, at high priority. A finished turn or error is pushed only if you were already away when it happened. Each event goes to the phone at most once, and the per-event switches apply here too.
+iTerm, Terminal, Ghostty, WezTerm, Warp, kitty and VS Code (including Cursor and other VS Code-based editors) work, with these differences:
 
-**Privacy and security:** each push contains the session name and the notification text (tool names, question text), and it goes through ntfy's servers. ntfy topics have no password: anyone who knows the name can read your notifications and send fake ones to your phone, including ones whose tap opens a link of their choosing. The plugin makes the name unguessable: five random words from a 1,296-word list plus four digits, about 65 bits. Topics can't be listed, and ntfy.sh limits how fast anyone can try names, so guessing one isn't practical. Keep it private. If it leaks, `/notifications` › **New phone topic** replaces it. For full control, [self-host ntfy](https://docs.ntfy.sh/install/), set `ntfyServer`, and set `ntfyToken` if your server requires an access token.
+- Clicking a notification brings the terminal to the front, but can't pick the right tab.
+- omp's built-in alerts stay on, so depending on your terminal you might get two alerts for the same thing.
+- If your terminal isn't recognised, notifications show up as coming from Terminal, and you get them even while you're looking at it.
+- Tapping a phone notification opens the ntfy app, not your terminal.
 
-**Tapping a phone notification** opens the Tern app when omp runs in Tern; iOS asks you to confirm first. It can't open the session's pane, because Tern's links only carry pairing codes. In other terminals, tapping opens the ntfy app.
+## Privacy
 
-## How notifications are posted
+- Nothing is sent anywhere unless you turn on phone notifications.
+- With phone notifications on, each alert (the session name and the message, such as the question omp is asking) goes through ntfy's servers to your phone.
+- ntfy topics don't have passwords. Anyone who knows your topic name could read your alerts or send fake ones to your phone. That's why the plugin makes up a long random name (about 65 bits, far too many combinations to guess). Don't share it. If it gets out, use `/notifications` › **New phone topic** to switch to a new one.
+- If you want more control, you can [run your own ntfy server](https://docs.ntfy.sh/install/) and point the plugin at it with the `ntfyServer` and `ntfyToken` settings.
 
-macOS only shows notifications from properly signed apps, and it won't let a command-line process post under another app's name by itself. This plugin uses [alerter](https://github.com/vjeantet/alerter) (MIT), a small notifier that its author signs with an Apple Developer ID.
+## How it works
 
-- On first use the plugin downloads alerter **v26.5** from its GitHub release, checks the zip against a pinned SHA-256, and stores the binary in `~/Library/Caches/omp-desktop-notify/`.
-- Notifications are posted with `--sender <terminal bundle id>`, so they carry the terminal's name, icon and notification permission.
-- To find out which app is in front, the plugin runs `lsappinfo` while a notification is pending or showing. With the phone channel on, it also reads the Mac's idle time and lock state (`ioreg`) while an event is unanswered.
-- Clicking a notification runs `open -b <terminal>`, and under Tern also `tern focus <pane>`.
+macOS only shows notifications from apps it trusts. This plugin uses [alerter](https://github.com/vjeantet/alerter), a small, signed helper that sends notifications on behalf of another app (here, Tern). On first use the plugin downloads alerter v26.5 from GitHub, checks that the file is exactly the expected one, and keeps it in `~/Library/Caches/omp-desktop-notify/`.
 
-Apart from the one-time alerter download, nothing touches the network unless you turn on phone notifications, which post to your ntfy server.
-
-## Limitations
-
-- Posting under the terminal's name with `--sender` relies on an old macOS feature that Apple no longer documents. It works on macOS 13 through 27, but a future release could remove it.
-- If the terminal can't be identified (see the list above), notifications are always sent, under Terminal's name, and they aren't removed when you come back.
-- The plugin does nothing over SSH, because the notification would appear on the remote Mac.
-- Phone notifications can't be withdrawn once sent, so an event you answer later stays in the ntfy app.
-- The plugin doesn't see omp's other dialogs, such as those opened by other extensions.
+To decide when to notify, the plugin checks which app is in front, and how long it's been since you touched the keyboard or mouse. It only checks while something is waiting.
 
 ## Uninstall
 
@@ -107,7 +120,7 @@ omp plugin uninstall omp-desktop-notify
 rm -rf ~/Library/Caches/omp-desktop-notify
 ```
 
-Then remove the `desktopNotify:` block from `~/.omp/agent/config.yml` if you changed any settings.
+If you changed any settings, also delete the `desktopNotify:` section from `~/.omp/agent/config.yml`.
 
 ## Development
 
@@ -116,11 +129,25 @@ git clone https://github.com/roachadam/omp-desktop-notify
 cd omp-desktop-notify
 bun install
 bun run typecheck
-omp plugin link .      # load this checkout into omp
+omp plugin link .
 ```
 
-`src/index.ts` handles omp's events and decides when to notify. `src/macos.ts` detects the terminal, checks whether you're at the Mac, and posts through alerter. `src/phone.ts` sends to ntfy. `src/settings.ts` defines the settings. omp writes the plugin's debug messages (`desktop-notify: …`) to `~/.omp/logs/`. The only runtime dependency is [uqr](https://github.com/unjs/uqr), which draws the setup QR code; omp's packages are used for types only.
+`omp plugin link .` makes omp load your local copy. Restart omp after you change something. The plugin writes debug lines starting with `desktop-notify:` to omp's logs in `~/.omp/logs/`.
+
+| File | What's in it |
+|---|---|
+| `src/index.ts` | Listens to omp and decides when to notify |
+| `src/macos.ts` | Finds your terminal, checks if you're around, shows Mac notifications |
+| `src/phone.ts` | Sends to ntfy |
+| `src/settings.ts` | The settings |
+
+## Credits
+
+- [alerter](https://github.com/vjeantet/alerter) by Valère Jeantet (MIT)
+- [ntfy](https://ntfy.sh) by Philipp Heckel
+- [uqr](https://github.com/unjs/uqr) for the QR code (MIT)
+- Topic words from the [EFF Short Wordlist](https://www.eff.org/dice), by the Electronic Frontier Foundation ([CC BY 3.0 US](https://creativecommons.org/licenses/by/3.0/us/))
 
 ## License
 
-MIT. Phone topics use the [EFF Short Wordlist](https://www.eff.org/dice) by the Electronic Frontier Foundation, licensed [CC BY 3.0 US](https://creativecommons.org/licenses/by/3.0/us/).
+MIT
